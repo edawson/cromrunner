@@ -1,0 +1,2 @@
+TEMPLATE_BAM,TEMPLATE_BAI,TEMPLATE_BQSR,TEMPLATE_REF_TARBALL
+gs://nvgenomics-standard/chr22-hg38-hg002/hg0002.novaseq.pcr-free.35x.chr22.pb.bam,gs://nvgenomics-standard/chr22-hg38-hg002/hg0002.novaseq.pcr-free.35x.chr22.pb.bam.bai,gs://nvgenomics-standard/chr22-hg38-hg002/hg0002.novaseq.pcr-free.35x.chr22.pb.BQSR-report.txt,gs://nvgenomics-standard/chr22-hg38-hg002/chr22.hg38.fa.tar
