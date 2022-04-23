@@ -1,10 +1,4 @@
-{
-  "PBCallWorkflow.inputRefTarball": "TEMPLATE_REF_TARBALL",
-  "PBCallWorkflow.inputRecal": "TEMPLATE_BQSR",
-  "PBCallWorkflow.nGPU": "2",
-  "PBCallWorkflow.pbPATH": "/parabricks/run_pipeline",
-  "PBCallWorkflow.inputBAI": "TEMPLATE_BAI",
-  "PBCallWorkflow.pbLicenseBin": "license.bin",
-  "PBCallWorkflow.inputBAM": "TEMPLATE_BAM",
-  "PBCallWorkflow.nThreads": "32"
-}
+TEMPLATE_NAME,TEMPLATE_SALUTATION
+test,Yo
+Another test,HOWDY!
+a third test!,Just for kicks...
