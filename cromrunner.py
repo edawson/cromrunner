@@ -92,7 +92,7 @@ class WorkInstance:
         ## in inputs.
         self.input_json = self.input_template_json
         for i in self.input_template_map:
-            self.input_json = self.input_json.replace(i, self.input_template_map[i])
+            self.input_json = self.input_json.replace( "<" + i + ">", self.input_template_map[i])
         
         p = get_verified_absolute_path(self.inputs_directory_path)
         outfile = p + "/" + self.rand_id + ".inputs.json"
