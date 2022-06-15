@@ -1,4 +1,4 @@
 {
-  "HelloExample.inputString": "TEMPLATE_NAME",
-  "HelloExample.salutation": "TEMPLATE_SALUTATION"
+  "HelloExample.inputString": "<TEMPLATE_NAME>",
+  "HelloExample.salutation": "<TEMPLATE_SALUTATION>"
 }
