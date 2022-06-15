@@ -13,10 +13,11 @@ WDL_TAG = "WDL_TAG"
 
 SWARM_FILE_TAG = "SWARM_FILE_TAG"
 SWARM_TIME_TAG = "TIME_TAG"
+SWARM_MODULE_TAG = "MODULE_TAG"
 
 BASE_CROMWELL_INVOCATION = "java " + CONFIG_TAG + " -jar " +  CROMWELL_TAG + " run -i " + INPUT_TAG + " WDL_TAG"
 
-BASE_SWARM_SUBMIT = "swarm " + SWARM_TIME_TAG + " -t 3 -g 12 -f " + SWARM_FILE_TAG
+BASE_SWARM_SUBMIT = "swarm --verbose 3 " +  SWARM_MODULE_TAG + " " + SWARM_TIME_TAG + " -t 3 -g 12 -f " + SWARM_FILE_TAG
 
 def get_verified_absolute_path(path: str) -> str:
     """Verify and return absolute path of argument.
@@ -153,6 +154,7 @@ class CromRunner:
         self.swarm_base_command: str = None
         self.swarm_file: str = None
         self.swarm_submit: str = None
+        self.swarm_modules: str = None
 
         self.work_instances: list = []
         self.max_simultaneous_instances: int = None
@@ -172,6 +174,7 @@ class CromRunner:
         self.cromwell_invocation: str = ""
 
         self.input_tmp_dir_path: str = None
+        self.dir_prefix: str = None
 
         self.input_manifest_header: list = None
 
@@ -183,7 +186,9 @@ class CromRunner:
         self.nthreads = args.threads
         self.wdl_path = get_verified_absolute_path(args.wdl)
         self.input_template_path = get_verified_absolute_path(args.template)
-        self.cromwell_config_path = "" if args.config is None else "-Dconfig.file" + get_verified_absolute_path(args.config)
+        self.cromwell_config_path = "" if args.config is None else get_verified_absolute_path(args.config)
+        self.swarm_modules_string = "" if args.modules is None else "--module " + args.modules
+        self.dir_prefix = args.prefix
 
     def get_config_target(self):
         if self.cromwell_config_path is not None:
@@ -195,7 +200,7 @@ class CromRunner:
         rand_two = get_random_string(8)
         rand_three = get_random_string(8)
         
-        self.input_tmp_dir_path = "-".join([ "INPUTS", "CROMRUNNER", rand_one, rand_two, rand_three])
+        self.input_tmp_dir_path = "-".join([ self.dir_prefix, rand_one, rand_two, rand_three])
         os.mkdir(self.input_tmp_dir_path)
         return self.input_tmp_dir_path
         
@@ -205,7 +210,7 @@ class CromRunner:
         Creates the paths to cromwell, config, a tag for the input file, and a tag for the WDL
         """
         self.cromwell_invocation = self.cromwell_invocation_template
-        self.cromwell_invocation = self.cromwell_invocation.replace("CONFIG_TAG", self.cromwell_config_path)
+        self.cromwell_invocation = self.cromwell_invocation.replace("CONFIG_TAG", self.get_config_target())
         self.cromwell_invocation = self.cromwell_invocation.replace("CROMWELL_TAG", self.cromwell_path)
         self.cromwell_invocation = self.cromwell_invocation.replace("WDL_TAG", self.wdl_path)
         return self.cromwell_invocation
@@ -269,7 +274,8 @@ class CromRunner:
 
     def create_swarm_submit_string(self):
         ## TODO: replace time with a parameter, link to CLI, and set a reasonable default
-        swarm_submit_string = BASE_SWARM_SUBMIT.replace(SWARM_TIME_TAG, "--time 48:00:00")
+        swarm_submit_string = BASE_SWARM_SUBMIT.replace(SWARM_TIME_TAG, "--time 36:00:00")
+        swarm_submit_string = swarm_submit_string.replace(SWARM_MODULE_TAG, self.swarm_modules_string)
         return swarm_submit_string
 
     def run_swarm(self):
@@ -291,7 +297,7 @@ class CromRunner:
         self.swarm_submit = get_verified_absolute_path(self.input_tmp_dir_path) + "/swarm_submit.sh"
         submit_string = submit_string.replace(SWARM_FILE_TAG, self.swarm_file)
         with open(self.swarm_submit, "w") as sfi:
-            sfi.write("/bin/bash\n")
+            sfi.write("#!/usr/bin/env bash\n")
             sfi.write(submit_string + "\n")
         os.chmod(self.swarm_submit, 0o777)
         return self.swarm_submit
@@ -326,6 +332,8 @@ def get_args():
     parser.add_argument("-d", "--delimiter", help="The delimiter used for input args in the input-file.", default=",", type=str, required=False)
     parser.add_argument("-n", "--num-concurrent-cromwells",dest="threads", help="The number of cromwell instances to spawn at one time (only applicable on local backend).", required=False, type=int, default=4)
     parser.add_argument("-B", "--backend", dest="backend", required=False, help="A backend to use for launching each cromwell instance (local or swarm). [local]")
+    parser.add_argument("--modules", dest="modules", help="The modules to load when running with the SWARM backend.", type=str, default=None)
+    parser.add_argument("--prefix", dest="prefix", help="A prefix to use for the CromRunner inputs directory.", type=str, default="INPUTS-CROMRUNNER")
     return parser.parse_args()
 
 if __name__ == "__main__":
