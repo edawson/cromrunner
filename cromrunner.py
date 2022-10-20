@@ -147,7 +147,7 @@ class CromRunner:
     running a single WDL on a single input, taken from the lines of the input manifest file.
     """
     def __init__(self):
-        self.available_backends = ["local", "swarm"]
+        self.available_backends = ["local", "swarm", "stage"]
         self.server_max_runtime_minutes: int = 24 * 60
         self.slurm_base_command: str = None
         
@@ -186,7 +186,7 @@ class CromRunner:
         self.nthreads = args.threads
         self.wdl_path = get_verified_absolute_path(args.wdl)
         self.input_template_path = get_verified_absolute_path(args.template)
-        self.cromwell_config_path = "" if args.config is None else get_verified_absolute_path(args.config)
+        self.cromwell_config_path = None if args.config is None else get_verified_absolute_path(args.config)
         self.swarm_modules_string = "" if args.modules is None else "--module " + args.modules
         self.dir_prefix = args.prefix
 
@@ -272,6 +272,15 @@ class CromRunner:
             exit(9)
         return
 
+    def run_stage(self):
+        for w in self.work_instances:
+            w.prepare_run()
+        submit_script = get_verified_absolute_path(self.input_tmp_dir_path) + "/cromwell_tasks.sh"
+        with open(submit_script, "w") as bash_output:
+            for w in self.work_instances:
+                bash_output.write(w.cromwell_invocation + "\n")
+        return
+
     def create_swarm_submit_string(self):
         ## TODO: replace time with a parameter, link to CLI, and set a reasonable default
         swarm_submit_string = BASE_SWARM_SUBMIT.replace(SWARM_TIME_TAG, "--time 36:00:00")
@@ -331,7 +340,7 @@ def get_args():
     parser.add_argument("-i", "--input-manifest", dest="manifest", help="A file containing inputs per instantiation, one per line, delimiter-separated, with a header that corresponds to templated input tags.", required=True, type=str)
     parser.add_argument("-d", "--delimiter", help="The delimiter used for input args in the input-file.", default=",", type=str, required=False)
     parser.add_argument("-n", "--num-concurrent-cromwells",dest="threads", help="The number of cromwell instances to spawn at one time (only applicable on local backend).", required=False, type=int, default=4)
-    parser.add_argument("-B", "--backend", dest="backend", required=False, help="A backend to use for launching each cromwell instance (local or swarm). [local]")
+    parser.add_argument("-B", "--backend", dest="backend", required=False, help="A backend to use for launching each cromwell instance (stage, local or swarm). Stage will write files but not run. [local]")
     parser.add_argument("--modules", dest="modules", help="The modules to load when running with the SWARM backend.", type=str, default=None)
     parser.add_argument("--prefix", dest="prefix", help="A prefix to use for the CromRunner inputs directory.", type=str, default="INPUTS-CROMRUNNER")
     return parser.parse_args()
@@ -347,6 +356,8 @@ if __name__ == "__main__":
 
     if args.backend == "swarm":
         runner.run_swarm()
+    if args.backend == "stage":
+    	runner.run_stage()
     else:
         runner.run_local()
 
