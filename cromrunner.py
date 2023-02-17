@@ -121,7 +121,7 @@ class WorkInstance:
         return None
     
     def run(self) -> WorkResult:
-        self.prepare_run()
+        #self.prepare_run()
         try:
             with open(self.stdout, "w") as stdout_file, \
                 open(self.stderr, "w") as stderr_file:
@@ -159,7 +159,7 @@ class CromRunner:
         self.work_instances: list = []
         self.max_simultaneous_instances: int = None
         self.results: list
-        self.backend: str = "local"
+        self.backend: str = None
         self.nthreads: int = 4
 
         self.input_manifest_path: str
@@ -256,6 +256,10 @@ class CromRunner:
                     exit(9)
         print("Loaded " + str(len(self.work_instances)) + " work units.")
 
+    def prepare_work_for_run(self):
+        for w in self.work_instances:
+            w.prepare_run()
+
     def run_slurm(self):
         """
         Run a CromRunner server that submits one SLURM job
@@ -324,16 +328,27 @@ def run_cromwell(work_instances: list) -> list:
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-C", "--cromwell-path", type=str, dest="cromwell_path", default="cromwell.jar", required=False)
-    parser.add_argument("-t", "--input-template", dest="template", help="Template file for WDL inputs.", required=True, type=str)
-    parser.add_argument("--config", dest="config", help="An optional Cromwell config file.", required=False, type=str, default=None)
-    parser.add_argument("-w", "--wdl", dest="wdl", help="A WDL script that defines a workflow.", required=True, type=str)
-    parser.add_argument("-i", "--input-manifest", dest="manifest", help="A file containing inputs per instantiation, one per line, delimiter-separated, with a header that corresponds to templated input tags.", required=True, type=str)
-    parser.add_argument("-d", "--delimiter", help="The delimiter used for input args in the input-file.", default=",", type=str, required=False)
-    parser.add_argument("-n", "--num-concurrent-cromwells",dest="threads", help="The number of cromwell instances to spawn at one time (only applicable on local backend).", required=False, type=int, default=4)
-    parser.add_argument("-B", "--backend", dest="backend", required=False, help="A backend to use for launching each cromwell instance (local or swarm). [local]")
-    parser.add_argument("--modules", dest="modules", help="The modules to load when running with the SWARM backend.", type=str, default=None)
-    parser.add_argument("--prefix", dest="prefix", help="A prefix to use for the CromRunner inputs directory.", type=str, default="INPUTS-CROMRUNNER")
+    parser.add_argument("-C", "--cromwell-path",
+            type=str, dest="cromwell_path", default="cromwell.jar", required=False)
+    parser.add_argument("-t", "--input-template",
+            dest="template", help="Template file for WDL inputs.", required=True, type=str)
+    parser.add_argument("--config", dest="config",
+            help="An optional Cromwell config file.", required=False, type=str, default=None)
+    parser.add_argument("-w", "--wdl", dest="wdl",
+            help="A WDL script that defines a workflow.", required=True, type=str)
+    parser.add_argument("-i", "--input-manifest",
+            dest="manifest", help="A file containing inputs per instantiation, one per line, delimiter-separated, with a header that corresponds to templated input tags.", required=True, type=str)
+    parser.add_argument("-d", "--delimiter",
+            help="The delimiter used for input args in the input-file.", default=",", type=str, required=False)
+    parser.add_argument("-n", "--num-concurrent-cromwells",
+            dest="threads", help="The number of cromwell instances to spawn at one time (only applicable on local backend).", required=False, type=int, default=4)
+    parser.add_argument("-B", "--backend",
+            dest="backend", required=False,
+            help="A backend to use for launching each cromwell instance (local or swarm). [None, no work is done]", default=None)
+    parser.add_argument("--modules",
+            dest="modules", help="The modules to load when running with the SWARM backend.", type=str, default=None)
+    parser.add_argument("--prefix",
+            dest="prefix", help="A prefix to use for the CromRunner inputs directory.", type=str, default="INPUTS-CROMRUNNER")
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -344,11 +359,14 @@ if __name__ == "__main__":
     runner.create_tmp_dir()
     invoc = runner.create_cromwell_base_instantiation()
     runner.create_work_instances()
+    runner.prepare_work_for_run()
 
     if args.backend == "swarm":
         runner.run_swarm()
-    else:
+    elif args.backend == "local":
         runner.run_local()
+    else:
+        print("Created work instances in: ", runner.input_tmp_dir_path)
 
 
 
